@@ -41,7 +41,11 @@ defmodule Jake do
     StreamData.constant({map, trunc(schema["size"] / 2)})
   end
 
-  def gen_all(schema, enum, _type) when enum != nil, do: gen_enum(schema["map"], enum)
+  def gen_all(schema, enum, _type) when enum != nil do
+    map = schema["map"]
+    StreamData.member_of(enum)
+    |> StreamData.filter(fn x -> ExJsonSchema.Validator.valid?(map, x) end)
+  end
 
   def gen_all(schema, _enum, type) when is_list(type) do
     list = for n <- type, do: %{"type" => n}
@@ -84,8 +88,4 @@ defmodule Jake do
     Jake.Object.gen_object(map, map["properties"], schema)
   end
 
-  def gen_enum(map, list) do
-    Enum.filter(list, fn x -> ExJsonSchema.Validator.valid?(map, x) end)
-    |> StreamData.member_of()
-  end
 end

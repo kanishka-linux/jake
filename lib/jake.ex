@@ -41,7 +41,7 @@ defmodule Jake do
     StreamData.constant({map, trunc(schema["size"] / 2)})
   end
 
-  def gen_all(schema, enum, _type) when enum != nil do
+  def gen_all(schema, enum, _type) when is_list(enum) do
     map = schema["map"]
     StreamData.member_of(enum)
     |> StreamData.filter(fn x -> ExJsonSchema.Validator.valid?(map, x) end)

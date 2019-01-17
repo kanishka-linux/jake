@@ -1,32 +1,25 @@
 defmodule Jake.String do
-  def gen(spec) do
-    options = []
-    min_length = Map.get(spec, "minLength")
-    max_length = Map.get(spec, "maxLength")
+  @strlen_min 1
 
-    options =
-      if min_length do
-        Keyword.put(options, :min_length, min_length)
-      else
-        options
-      end
+  @strlen_max 100
 
-    options =
-      if max_length do
-        Keyword.put(options, :max_length, max_length)
-      else
-        options
-      end
+  def find_min_max(map) do
+    min = Map.get(map, "minLength", @strlen_min)
+    max = Map.get(map, "maxLength", @strlen_max)
+    {min, max}
+  end
 
-    pattern = Map.get(spec, "pattern")
+  def gen_string(map, pattern) when is_nil(pattern) do
+    {min, max} = find_min_max(map)
+    StreamData.string(:alphanumeric, [{:max_length, max}, {:min_length, min}])
+  end
 
-    if pattern do
-      Randex.stream(pattern, mod: Randex.Generator.StreamData)
-      |> StreamData.filter(fn x ->
-        (!max_length || length(x) <= max_length) && (!min_length || length(x) >= min_length)
-      end)
-    else
-      StreamData.string(:ascii, options)
+  def gen_string(map, pattern) when is_binary(pattern) do
+    {min, max} = find_min_max(map)
+    pat = Randex.stream(~r/#{pattern}/, mod: Randex.Generator.StreamData)
+
+    if min <= max do
+      StreamData.filter(pat, fn x -> String.length(x) in min..max end)
     end
   end
 end

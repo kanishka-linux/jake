@@ -9,7 +9,6 @@ defmodule JakeTestRef do
     IO.inspect(Enum.take(gen, 3))
 
     check all a <- gen do
-      IO.inspect a
       assert ExJsonSchema.Validator.valid?(schema, a)
     end
   end

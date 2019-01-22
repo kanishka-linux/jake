@@ -23,10 +23,15 @@ defmodule Jake do
       fn {nmap, nsize} ->
         nschema = Map.put(schema, "map", nmap) |> Map.put("size", nsize)
 
-        if nmap["enum"] do
-          gen_enum(nschema, nmap["enum"])
-        else
-          gen(nmap, nschema)
+        cond do
+          nmap["$ref"] ->
+            gen_init(nschema)
+
+          nmap["enum"] ->
+            gen_enum(nschema, nmap["enum"])
+
+          true ->
+            gen(nmap, nschema)
         end
         |> StreamData.resize(nsize)
       end
@@ -37,6 +42,7 @@ defmodule Jake do
     {map, ref} =
       get_in(schema, ["map", "$ref"]) |> Jake.Ref.expand_ref(schema["map"], schema["omap"])
 
+    # IO.inspect {map, ref}
     if ref do
       StreamData.constant({map, trunc(schema["size"] / 2)})
     else

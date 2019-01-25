@@ -1,6 +1,7 @@
 defmodule Jake do
   alias Jake.MapUtil
   alias Jake.Context
+  alias Jake.StreamUtil
 
   @types [
     "array",
@@ -71,6 +72,24 @@ defmodule Jake do
       |> MapUtil.deep_merge(properties)
 
     %{context | child: child} |> gen_lazy()
+  end
+
+  def gen(%Context{child: %{"oneOf" => options} = spec} = context) when is_list(options) do
+
+    tail_schema = fn tail ->
+      Enum.reduce(tail, %{}, fn x, acc -> MapUtil.deep_merge(acc, x) end)
+    end
+    
+    one_of_drop = Map.drop(spec, ["oneOf"])
+    nlist =
+      for {n, counter} <- Enum.with_index(options) do
+        type_map = if n["type"] == nil, do: %{"type" => StreamUtil.guess_type(n)}, else: nil
+        n = if type_map, do: Map.merge(type_map, n), else: n
+        hd = %{context | child: Map.merge(one_of_drop, n)} |> gen_lazy()
+        tail = List.delete_at(options, counter) |> tail_schema.()
+        {hd, tail}
+      end
+    StreamUtil.try_one_of(nlist, 0)
   end
 
   def gen(%Context{child: %{"type" => type} = _spec} = context) when is_binary(type) do

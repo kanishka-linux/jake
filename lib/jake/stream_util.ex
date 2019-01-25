@@ -1,4 +1,28 @@
 defmodule Jake.StreamUtil do
+
+  @prop %{
+    "minLength" => "string",
+    "maxLength" => "string",
+    "pattern" => "string",
+    "multipleOf" => "number",
+    "minimum" => "number",
+    "maximum" => "number",
+    "exclusiveMinimum" => "number",
+    "exclusiveMaximum" => "number",
+    "items" => "array",
+    "additionalItems" => "array",
+    "minItems" => "array",
+    "maxItems" => "array",
+    "uniqueItems" => "array",
+    "properties" => "object",
+    "patternProperties" => "object",
+    "additionalProperties" => "object",
+    "dependencies" => "object",
+    "required" => "object",
+    "minProperties" => "object",
+    "maxProperties" => "object"
+  }
+
   def some_of(datas, range) do
     StreamData.integer(range)
     |> StreamData.bind(fn n ->
@@ -36,6 +60,30 @@ defmodule Jake.StreamUtil do
     end)
   end
 
+  def try_one_of(nlist, index) do
+    data = filter_mutually_exclusive(nlist, index)
+
+    try do
+      Enum.take(data, 5)
+      data
+    rescue
+      _ -> try_one_of(nlist, index + 1)
+    end
+  end
+
+  def filter_mutually_exclusive(nlist, index) do
+    if index < length(nlist) do
+      {head, tail_schema} = Enum.at(nlist, index)
+      StreamData.filter(head, fn hd -> not ExJsonSchema.Validator.valid?(tail_schema, hd) end)
+    else
+      raise "oneOf combination not possible"
+    end
+  end
+
+  def guess_type(child) do
+    (for {k, _} <- child, into: [], do: @prop[k]) |> Enum.fetch!(0)
+  end
+  
   defp ceil(x) do
     trunc(Float.ceil(x * 1.0))
   end
